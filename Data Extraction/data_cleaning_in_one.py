@@ -22,6 +22,8 @@ def filter_punc(text):
 def run_processing_steps(filename):
     tweets_df = pd.read_csv(filename, lineterminator='\n')
     tweets_df.drop_duplicates(inplace=True)
+    # 先drop
+    tweets_df.dropna(subset=['content'], inplace=True)
     
     tmp = tweets_df.content.str.findall("#\w+")
     # print(tmp[tmp.apply(lambda x: x!=[])]) # 查看存在#的行
