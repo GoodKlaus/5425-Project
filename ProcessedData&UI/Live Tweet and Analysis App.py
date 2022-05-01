@@ -1,5 +1,6 @@
 import requests
 import os
+import re
 import json
 import pandas as pd
 import csv
@@ -18,6 +19,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from PIL import Image
 from tqdm import tqdm
+import timeit
 
 def deEmojify(text):
     regrex_pattern = re.compile(pattern = "["
@@ -110,18 +112,18 @@ def twitter_bot(topic, limit, duration_in_min):
     
     filename = "labeled_tweets_"+ current_dt.strftime("%Y-%m-%d %H:%M") 
 
-    try:
-        print("Getting Tweets for time between ", new_dt.strftime("%Y-%m-%d %H:%M"), ' and ',
-             current_dt.strftime("%Y-%m-%d %H:%M"))
-        tweets_df = get_tweets(topic, start_time, end_time, limit)
-        # tweets_df_russia = get_tweets('Russia', start_time, end_time, limit)
-        processed_df = run_processing_steps(tweets_df)
-        df= sentiment_analysis(processed_df)
-        return df
     
-    except Exception as e:
-        print('It is not working...')
-        print(e)
+    print("Getting Tweets for time between ", new_dt.strftime("%Y-%m-%d %H:%M"), ' and ',
+         current_dt.strftime("%Y-%m-%d %H:%M"))
+    tweets_df = get_tweets(topic, start_time, end_time, limit)
+    # tweets_df_russia = get_tweets('Russia', start_time, end_time, limit)
+    processed_df = run_processing_steps(tweets_df)
+    df= sentiment_analysis(processed_df)
+    return df, new_dt, current_dt
+    
+    # except Exception as e:
+    #     print('It is not working...')
+    #     print(e)
 
 #To Hide Warnings
 st.set_option('deprecation.showfileUploaderEncoding', False)
@@ -139,7 +141,7 @@ def main():
     #st.subheader("Select a topic which you'd like to get the sentiment analysis on :")
 
     html_temp = """
-	<div style="background-color:tomato;"><p style="color:white;font-size:40px;padding:9px">Live twitter Sentiment analysis</p></div>
+	<div style="background-color:tomato;"><p style="color:white;font-size:40px;padding:9px">Live Twitter Sentiment Analyzer</p></div>
 	"""
     st.markdown(html_temp, unsafe_allow_html=True)
     st.subheader("Select a topic which you'd like to get the sentiment analysis on (Ukraine/Russia) :")
@@ -150,24 +152,30 @@ def main():
     # Collect Input from user :
     Topic = str()
     Topic = str(st.text_input("Enter the topic you are interested in (Press Enter once done)"))     
-        
-    Limit = st.number_input("Enter the Max No. of Tweets you would like to see at one time")     
+    #Limit = st.number_input("Enter the Max No. of Tweets you would like to see at one time", min_value=0, max_value=10000000, value=0, step=1)
+    Duration = st.number_input("Enter the time period of the tweets to be searched (unit: minutes)", min_value=0, max_value=10, value=0, step=1)
+
 
 #     Limit = int(st.text_input("Enter the Max No. of Tweets you would like to see at one time"))     
     
-    if len(Topic) > 0 and len(Limit) > 0:
+    if len(Topic) > 0 and Duration > 0:
         
+
+        start = timeit.default_timer()  
         # Call the function to extract the data. pass the topic and filename you want the data to be stored in.
         with st.spinner("Please wait, Tweets are being extracted"):
-            df = twitter_bot(Topic, Limit, 10)
+            df_, current_dt, new_dt= twitter_bot(Topic, 10000000, Duration)
+        end = timeit.default_timer()  
+        df = df_.copy()
+        print(df_)
         st.success('Tweets have been Extracted !!!!')    
-        
+        st.write("Successfully scraped and processed tweets for time between {} and {}".format(new_dt.strftime("%Y-%m-%d %H:%M"), current_dt.strftime("%Y-%m-%d %H:%M")))
         # Write Summary of the Tweets
-        st.write("Total Tweets Extracted for Topic '{}' are : {}".format(Topic,len(df.Tweet)))
+        st.write("Total Tweets Extracted for Topic '{}' are : {}".format(Topic,len(df)))
         st.write("Total Positive Tweets are : {}".format(len(df[df["label"]==1])))
         st.write("Total Negative Tweets are : {}".format(len(df[df["label"]==-1])))
         st.write("Total Neutral Tweets are : {}".format(len(df[df["label"]==0])))
-    
+        st.write("Time elapsed : {} sec".format(round(end-start, 4))) 
         if st.button("Exit"):
             st.balloons()
             
