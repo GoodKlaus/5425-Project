@@ -9,7 +9,7 @@ Pliease install python modules based on the versions in requirements.txt.
     > conda activate YOUR_ENV_NAME
 
 then, install all dependacies.
-> pip install -r requirements.txt
+> pip install -qr requirements.txt
 
 ## Run demo Locally
 Note: as the data is not real-time(otherwise scraping is time-consuming), we **only give several sample *dates* of tweets data**.
