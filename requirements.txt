@@ -1,0 +1,13 @@
+numpy
+pandas
+wordcloud
+streamlit
+tqdm
+nltk
+seaborn
+matplotlib
+textblob
+tweepy
+snscrape
+pyspark====3.1.2
+spark-nlp
