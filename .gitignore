@@ -1,9 +1,9 @@
 .DS_Store
-*.csv
+Data Extraction/*.csv
 Data Extraction/tweet_extracting 2.ipynb
 __pycache__/
 process/
 Data Extraction/wordcloud.ipynb
-ProcessedData&UI/all_wordclouds
+# ProcessedData&UI/all_wordclouds
 Data Extraction/all_label_data_Russia.zip
 ProcessedData&UI/visualization草稿.ipynb
