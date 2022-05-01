@@ -137,11 +137,11 @@ def mapping(x):
         return "Neutral"
     else:
         return "Against"
-dict1 = data1['label'].value_counts(dropna=False, normalize=True)
+dict1 = data1['label'].value_counts(dropna=True, normalize=True)
 labels1 = list(map(mapping, dict1.keys()))
 counts1 = dict1.iloc[:]
 
-dict2 = data2['label'].value_counts(dropna=False, normalize=True)
+dict2 = data2['label'].value_counts(dropna=True, normalize=True)
 labels2 = list(map(mapping, dict2.keys()))
 counts2 = dict2.iloc[:]
  

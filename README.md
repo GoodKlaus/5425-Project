@@ -14,5 +14,4 @@ then, install all dependacies.
 ## Run demo Locally
 Note: as the data is not real-time(otherwise scraping is time-consuming), we **only give several sample *dates* of tweets data**.
 
-> cd ProcessedData&UI
-> streamlit run app.py
+> cd ProcessedData\&UI && streamlit run UI.py
