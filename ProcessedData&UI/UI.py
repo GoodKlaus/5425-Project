@@ -29,15 +29,15 @@ def find_csv_filenames(path_to_dir, suffix=".csv" ):
     filenames = listdir(path_to_dir)
     return [ filename for filename in filenames if filename.endswith( suffix ) ]
 
-st.write("### Select a date or all dates(02.24 to 04-19)")
+
 keyword1 = "Russia"
-path1 = f"all_label_data_{keyword1}"
+path1 = f"all_label_textblob_{keyword1}"
 russian_csv_filesnames = find_csv_filenames(f"./{path1}")
 dates1 = sorted([filename.split("_")[2] for filename in russian_csv_filesnames])
 # print(dates1)
 
 keyword2 = "Ukraine"
-path2 = f"all_label_data_{keyword2}"
+path2 = f"all_label_textblob_{keyword2}"
 ukr_csv_filesnames = find_csv_filenames(f"./{path2}")
 dates2 = sorted([filename.split("_")[1] for filename in ukr_csv_filesnames])
 # print(dates2)
@@ -45,7 +45,7 @@ dates2 = sorted([filename.split("_")[1] for filename in ukr_csv_filesnames])
 dates = sorted(list(set(dates1).intersection(set(dates2))))
 # print("文件共有日期", dates)
 
-
+st.write(f"### Select a date from: {', '.join(dates)}")
 date_selected = st.selectbox("Date", dates)
 st.write(f"### Show analytics of {date_selected} tweets:")
 
@@ -55,16 +55,25 @@ horizonline = '''
 
 st.markdown(horizonline)
 
+from pandas.api.types import is_string_dtype, is_numeric_dtype
 # 0. 读取csv data
 data1 = pd.read_csv(f"./{path1}/label_en_{date_selected}_{keyword1}.csv")
 data1 = data1.dropna(subset=['content', 'label', 'id', 'username'])
 data1.drop_duplicates(inplace=True)
+# 部分文件的like_count类型是obj, 因为数据错位了 混入了tag
+if is_string_dtype(data1['like_count']):
+    data1.drop(data1[data1['like_count'].str.startswith("[")].index, inplace = True)
+    data1['like_count'] = data1['like_count'].apply(int)
+
 # st.dataframe(data1[['content']][:5], width=50000)
 
 data2 = pd.read_csv(f"./{path2}/label_{date_selected}_{keyword2}.csv")
 data2 = data2.dropna(subset=['content', 'label', 'id', 'username'])
 data2.drop_duplicates(inplace=True)
-# st.write(data2[:5])
+# 部分文件的like_count类型是obj, 因为数据错位了 混入了tag
+if is_string_dtype(data2['like_count']):
+    data2.drop(data2[data2['like_count'].str.startswith("[")].index, inplace = True)
+    data2['like_count'] = data2['like_count'].apply(int)
 
 # 1.读取wordcloud
 st.write(f"### 1. Wordcloud of 2 keyword (filter out topic and non-meaningful words)")
@@ -81,9 +90,46 @@ st.write(f"Wordclouds for {keyword1} VS {keyword2} on {date_selected}")
 st.image([image1, image2], width=700)
 # st.image(image2, caption=filename, width=500)
 
+
 st.markdown(horizonline)
-# 2. 获取预测stances分布
-st.write(f"### 2. Predicted Stance Distributuons on 2 sides")
+
+
+# 2. 获取预测emotion of tweets分布
+st.write(f"### 2. Predicted Tweets Emotion Distributuons on 2 sides")
+
+path3 = f"all_label_sparknlp_{keyword1}"
+data3 = pd.read_csv(f"./{path3}/sparknlp_en_{date_selected}_{keyword1}.csv")
+data3.drop_duplicates(inplace=True)
+
+
+path4 = f"all_label_sparknlp_{keyword2}"
+data4 = pd.read_csv(f"./{path4}/sparknlp_en_{date_selected}_{keyword2}.csv")
+data4.drop_duplicates(inplace=True)
+
+
+def mapping2(x):
+    emo_labels = { (i+1):emo for i, emo in enumerate("surprise joy sadness fear".split())}
+    return emo_labels[x]
+
+dict3 = data3['label'].value_counts(dropna=True, normalize=True)
+labels3 = list(map(mapping2, dict3.keys()))
+counts3 = dict3.iloc[:]
+dict4 = data4['label'].value_counts(dropna=True, normalize=True)
+labels4 = list(map(mapping2, dict4.keys()))
+counts4 = dict4.iloc[:]
+
+fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,10))
+ax1.pie(counts3,labels = labels3,autopct = '%1.2f%%') 
+ax1.set_title("Emotion Distribution for Russia tweets")
+ax2.pie(counts4,labels = labels4,autopct = '%1.2f%%') 
+ax2.set_title("Emotion Distribution for Ukraine tweets")
+st.pyplot(fig)
+
+st.markdown(horizonline)
+# 3. 获取预测stances分布
+st.write(f"### 3. Predicted Stance Distributuons on 2 sides")
+
+
 def mapping(x):
     if x == 1.0:
         return "Supportive"
@@ -99,22 +145,23 @@ dict2 = data2['label'].value_counts(dropna=False, normalize=True)
 labels2 = list(map(mapping, dict2.keys()))
 counts2 = dict2.iloc[:]
  
-fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+fig2, (ax3, ax4) = plt.subplots(1,2, figsize=(10,5))
 # plt.suptitle(f'Stance on {date_selected}, {keyword1} VS {keyword2}', fontsize=10)
-ax1.pie(counts1,labels = labels1,autopct = '%1.2f%%') 
-ax1.set_title(f"Stance on {date_selected}, {keyword1}")
-ax2.pie(counts2,labels = labels2,autopct = '%1.2f%%') 
-ax2.set_title(f"Stance on {date_selected}, {keyword2}")
-st.pyplot(fig)
+ax3.pie(counts1,labels = labels1,autopct = '%1.2f%%') 
+ax3.set_title(f"Stance on {date_selected}, {keyword1}")
+ax4.pie(counts2,labels = labels2,autopct = '%1.2f%%') 
+ax4.set_title(f"Stance on {date_selected}, {keyword2}")
+st.pyplot(fig2)
 
 st.markdown(horizonline)
-# 3. 获取top tags, 除去搜索关键词
-st.write(f"### 3. Show most frequent tags")
+# . 获取top tags, 除去搜索关键词
+st.write(f"### 4. Show most frequent tags")
 main_keywords = ["Russian", "Russia","Ukraine", "Ukrainian", "Ukrainians", "Putin", "Putins", 
                  "Russians", "Russias",
                  "Ukraina", "RussiaUkraineCrisis", "RussiaUkraine", "UkraineRussiaCrisis", "UkraineRussiaConflict",
                  "RussiaUkraineConflict", "UkraineRussia", "UkraineRussie", "BREAKING", 'UkraineRussiaWar',
-                 "UkraineRussianWar", "RussiaUkraineWar", "War", "UkraineWar"]
+                 "UkraineRussianWar", "RussiaUkraineWar", "War", "UkraineWar", 
+                 "RussianUkrainianWar"]
 main_keywords += [s.lower() for s in main_keywords] # 加上小写
 
 tag1 = []
@@ -144,9 +191,9 @@ sns.barplot(data = dist2, x = "Tags", y = "Count", ax = axs[0][1])
 st.pyplot(fig)
 
 st.markdown(horizonline)
-# 4. 获取点赞多的tweets
-topK = 6
-st.write(f"### 4. Show top-likes tweets in both sides")
+# 5. 获取点赞多的tweets
+topK = 5
+st.write(f"### 5. Show top-likes tweets in both sides")
 
 tweet_Russia = data1.nlargest(columns="like_count", n = 20)[["content", "like_count", "label"]]
 tweet_Russia["like_count"] = tweet_Russia["like_count"].astype(int)
